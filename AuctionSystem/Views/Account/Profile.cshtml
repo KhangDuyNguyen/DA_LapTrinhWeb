@@ -1,0 +1,217 @@
+@model AuctionSystem.Models.ProfileViewModel
+@{ ViewData["Title"] = "Thông tin tài khoản"; }
+
+<div class="profile-layout">
+    <!-- Sidebar tài khoản -->
+    <aside class="profile-sidebar">
+        <div class="profile-sidebar-avatar">
+            <div class="profile-avatar-circle">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="profile-avatar-name">@User.Identity?.Name?.Split('@')[0]</div>
+            @if (Model?.IsVerified == true)
+            {
+                <span class="verified-badge"><i class="fas fa-check-circle"></i> Đã xác minh</span>
+            }
+            else
+            {
+                <span class="unverified-badge"><i class="fas fa-exclamation-circle"></i> Chưa xác minh</span>
+            }
+        </div>
+
+        <nav class="profile-nav">
+            <a asp-action="Profile" class="profile-nav-item active">
+                <i class="fas fa-user-circle"></i> Thông tin tài khoản
+            </a>
+            <a href="#" class="profile-nav-item">
+                <i class="fas fa-shopping-cart"></i> Giỏ hàng
+            </a>
+            <a asp-controller="Auction" asp-action="MyAuctions" class="profile-nav-item">
+                <i class="fas fa-clock"></i> Phiên chờ đấu giá
+            </a>
+            <a asp-controller="Auction" asp-action="MyBids" class="profile-nav-item">
+                <i class="fas fa-history"></i> Lịch sử đấu giá
+            </a>
+            <a asp-action="Documents" class="profile-nav-item">
+                <i class="fas fa-file-alt"></i> Tài liệu của tôi
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Nội dung chính -->
+    <div class="profile-content">
+        <div class="profile-header">
+            <h1>Thông tin tài khoản</h1>
+            <div class="profile-header-btns">
+                <a asp-action="VerifyIdentity" class="btn-outline-coral">
+                    <i class="fas fa-id-card"></i> Xác minh danh tính
+                </a>
+                <a asp-action="ChangePassword" class="btn-teal">
+                    <i class="fas fa-key"></i> Thay đổi mật khẩu
+                </a>
+            </div>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert-success-bar">
+                <i class="fas fa-check-circle"></i> @TempData["Success"]
+            </div>
+        }
+
+        <form asp-action="Profile" method="post" enctype="multipart/form-data" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert-danger"></div>
+
+            <!-- Thông tin cá nhân -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h2>Thông tin cá nhân</h2>
+                    <button type="button" class="btn-icon-edit" id="editPersonalBtn">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+                <div class="profile-form-grid three-col">
+                    <div class="form-group">
+                        <label>Họ và tên <span class="required">*</span></label>
+                        <input asp-for="FullName" class="form-control" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Số điện thoại <span class="required">*</span></label>
+                        <input asp-for="PhoneNumber" class="form-control" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Email <span class="required">*</span></label>
+                        <input asp-for="Email" class="form-control" readonly style="opacity:0.6;" />
+                    </div>
+                </div>
+                <div class="profile-form-grid two-col">
+                    <div class="form-group">
+                        <label>Căn cước/CCCD</label>
+                        <input asp-for="IdentityNumber" class="form-control" placeholder="Số CCCD/CMND" />
+                    </div>
+                    <div class="form-group">
+                        <label>Mã số thuế</label>
+                        <input asp-for="TaxCode" class="form-control" placeholder="Mã số thuế (nếu có)" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Địa chỉ -->
+            <div class="profile-section">
+                <h2>Địa chỉ nơi thường trú</h2>
+                <div class="form-group">
+                    <label>Địa chỉ chi tiết theo VNeID <span class="required">*</span></label>
+                    <input asp-for="Address" class="form-control" placeholder="Số nhà, đường, phường/xã..." />
+                </div>
+                <div class="profile-form-grid two-col">
+                    <div class="form-group">
+                        <label>Chọn tỉnh/ thành phố <span class="required">*</span></label>
+                        <select asp-for="Province" class="form-control">
+                            <option value="">-- Chọn tỉnh/thành phố --</option>
+                            <option>Hà Nội</option>
+                            <option>Hồ Chí Minh</option>
+                            <option>Đà Nẵng</option>
+                            <option>Cần Thơ</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Chọn phường/ xã <span class="required">*</span></label>
+                        <select asp-for="District" class="form-control">
+                            <option value="">-- Chọn phường/xã --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CCCD -->
+            <div class="profile-section">
+                <h2>Căn cước/CCCD</h2>
+                <div class="profile-form-grid two-col">
+                    <div class="form-group">
+                        <label>Ngày cấp <span class="required">*</span></label>
+                        <input asp-for="IdentityDate" type="date" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Nơi cấp <span class="required">*</span></label>
+                        <select asp-for="IdentityPlace" class="form-control">
+                            <option value="">-- Chọn nơi cấp --</option>
+                            <option>Cục Cảnh sát QLHC về TTXH</option>
+                            <option>Công an tỉnh Hà Nội</option>
+                            <option>Công an tỉnh Hồ Chí Minh</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="profile-form-grid two-col">
+                    <div class="form-group">
+                        <label>Ảnh Căn cước/CCCD mặt trước <span class="required">*</span></label>
+                        <div class="upload-box" id="uploadFront" onclick="document.getElementById('cccdFront').click()">
+                            @if (!string.IsNullOrEmpty(Model?.CccdFrontUrl))
+                            {
+                                <img src="@Model.CccdFrontUrl" class="upload-preview" id="previewFront" />
+                            }
+                            else
+                            {
+                                <div class="upload-placeholder" id="placeholderFront">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>Tải lên</span>
+                                </div>
+                            }
+                        </div>
+                        <input type="file" id="cccdFront" name="CccdFrontFile" accept="image/*" style="display:none" onchange="previewImg(this,'previewFront','placeholderFront')" />
+                    </div>
+                    <div class="form-group">
+                        <label>Ảnh Căn cước/CCCD mặt sau <span class="required">*</span></label>
+                        <div class="upload-box" onclick="document.getElementById('cccdBack').click()">
+                            @if (!string.IsNullOrEmpty(Model?.CccdBackUrl))
+                            {
+                                <img src="@Model.CccdBackUrl" class="upload-preview" id="previewBack" />
+                            }
+                            else
+                            {
+                                <div class="upload-placeholder" id="placeholderBack">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>Tải lên</span>
+                                </div>
+                            }
+                        </div>
+                        <input type="file" id="cccdBack" name="CccdBackFile" accept="image/*" style="display:none" onchange="previewImg(this,'previewBack','placeholderBack')" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lưu -->
+            <div class="profile-save-bar">
+                <button type="submit" class="btn-primary-lg">
+                    <i class="fas fa-save"></i> Lưu và thay đổi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function previewImg(input, previewId, placeholderId) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        let preview = document.getElementById(previewId);
+        const placeholder = document.getElementById(placeholderId);
+        if (!preview) {
+            preview = document.createElement('img');
+            preview.id = previewId;
+            preview.className = 'upload-preview';
+            input.closest('.form-group').querySelector('.upload-box').appendChild(preview);
+        }
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+}
+</script>
+}

@@ -1,0 +1,56 @@
+@model IEnumerable<AuctionItem>
+@{ ViewData["Title"] = "Tất cả phiên đấu giá"; }
+
+<div class="page-header">
+    <div>
+        <span class="page-kicker"><i class="fas fa-gavel"></i> Auction manager</span>
+        <h1>Tất cả phiên đấu giá (@Model.Count())</h1>
+    </div>
+    <a asp-action="Index" class="btn-secondary"><i class="fas fa-arrow-left"></i> Dashboard</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="table-wrap"><div class="alert-success"><i class="fas fa-check-circle"></i> @TempData["Success"]</div></div>
+}
+
+<div class="table-wrap">
+    <div class="card table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Danh mục</th>
+                    <th>Người tạo</th>
+                    <th>Giá hiện tại</th>
+                    <th>Trạng thái</th>
+                    <th>Duyệt</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    var statusText = item.Status switch { AuctionStatus.Active => "Đang diễn ra", AuctionStatus.Pending => "Sắp bắt đầu", _ => "Đã kết thúc" };
+                    var statusClass = item.Status switch { AuctionStatus.Active => "badge-active", AuctionStatus.Pending => "badge-pending", _ => "badge-ended" };
+                    <tr>
+                        <td><strong>@item.Title</strong></td>
+                        <td>@(item.Category?.Name ?? "Khác")</td>
+                        <td>@item.CreatedByUser?.FullName</td>
+                        <td class="price-cell">@item.CurrentPrice.ToString("N0") VNĐ</td>
+                        <td><span class="@statusClass">@statusText</span></td>
+                        <td>@(item.IsApproved ? "Đã duyệt" : "Chờ duyệt")</td>
+                        <td>
+                            <div class="action-row">
+                                <a asp-controller="Auction" asp-action="Detail" asp-route-id="@item.Id" class="btn-sm">Xem</a>
+                                <form asp-action="DeleteAuction" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Xóa phiên này?')">
+                                    <button type="submit" class="btn-sm" style="color:var(--danger);"><i class="fas fa-trash"></i> Xóa</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

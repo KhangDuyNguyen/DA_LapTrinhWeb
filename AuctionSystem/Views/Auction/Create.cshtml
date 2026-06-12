@@ -1,0 +1,92 @@
+@model CreateAuctionViewModel
+@{ ViewData["Title"] = "Tạo phiên đấu giá"; }
+
+<div class="page-header">
+    <div>
+        <span class="page-kicker"><i class="fas fa-circle-plus"></i> Đăng sản phẩm</span>
+        <h1>Tạo phiên đấu giá mới</h1>
+    </div>
+    <a asp-action="Index" class="btn-secondary"><i class="fas fa-arrow-left"></i> Quay lại</a>
+</div>
+
+<div class="form-card">
+    <form asp-action="Create" method="post" enctype="multipart/form-data">
+        <div asp-validation-summary="All" class="alert-danger"></div>
+
+        <div class="form-group">
+            <label asp-for="Title"><i class="fas fa-tag"></i> Tên sản phẩm</label>
+            <input asp-for="Title" class="form-control" placeholder="VD: Đồng hồ cơ, laptop, máy ảnh..." />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+
+        <div class="form-row two-col">
+            <div class="form-group">
+                <label asp-for="CategoryId"><i class="fas fa-layer-group"></i> Danh mục</label>
+                <select asp-for="CategoryId" asp-items="Model.Categories" class="form-control">
+                    <option value="">-- Chọn danh mục --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-image"></i> Hình ảnh sản phẩm</label>
+                <input type="file" name="imageFile" class="form-control" accept="image/*" id="imageInput" />
+            </div>
+        </div>
+
+        <div id="imagePreview" class="upload-box" style="display:none; margin-bottom:18px; min-height:240px;">
+            <img id="previewImg" class="upload-preview" />
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Description"><i class="fas fa-align-left"></i> Mô tả</label>
+            <textarea asp-for="Description" class="form-control" rows="5" placeholder="Mô tả tình trạng, nguồn gốc, phụ kiện, điều kiện giao dịch..."></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <div class="form-row two-col">
+            <div class="form-group">
+                <label asp-for="StartingPrice"><i class="fas fa-coins"></i> Giá khởi điểm (VNĐ)</label>
+                <input asp-for="StartingPrice" type="number" class="form-control" placeholder="1000000" />
+                <span asp-validation-for="StartingPrice" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="MinBidIncrement"><i class="fas fa-arrow-trend-up"></i> Bước giá tối thiểu (VNĐ)</label>
+                <input asp-for="MinBidIncrement" type="number" class="form-control" />
+                <span asp-validation-for="MinBidIncrement" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-row two-col">
+            <div class="form-group">
+                <label asp-for="StartTime"><i class="fas fa-play"></i> Thời gian bắt đầu</label>
+                <input asp-for="StartTime" type="datetime-local" class="form-control" value="@Model.StartTime.ToString("yyyy-MM-ddTHH:mm")" />
+                <span asp-validation-for="StartTime" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="EndTime"><i class="fas fa-flag-checkered"></i> Thời gian kết thúc</label>
+                <input asp-for="EndTime" type="datetime-local" class="form-control" value="@Model.EndTime.ToString("yyyy-MM-ddTHH:mm")" />
+                <span asp-validation-for="EndTime" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary"><i class="fas fa-gavel"></i> Gửi duyệt phiên đấu giá</button>
+            <a asp-action="Index" class="btn-secondary"><i class="fas fa-xmark"></i> Hủy</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+document.getElementById('imageInput')?.addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        document.getElementById('previewImg').src = e.target.result;
+        document.getElementById('imagePreview').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+});
+</script>
+@{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

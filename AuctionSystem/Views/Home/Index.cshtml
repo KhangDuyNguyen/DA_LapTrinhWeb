@@ -1,0 +1,201 @@
+@model AuctionSearchViewModel
+@{
+    ViewData["Title"] = "Trang chủ";
+    var hasAuctions = Model?.Results != null && Model.Results.Any();
+}
+
+<section class="hero-section">
+    <div class="hero-inner">
+        <div class="hero-copy">
+            <span class="hero-badge">
+                <i class="fas fa-bolt"></i> Đấu giá realtime trên nền giao diện editorial
+            </span>
+
+            <h1 class="hero-title">Một không gian đấu giá ấm, rõ và đáng tin.</h1>
+
+            <p class="hero-subtitle">
+                AuctionHub được thiết kế lại theo tinh thần cream canvas, coral CTA và dark product surfaces:
+                tập trung vào sản phẩm, giá hiện tại và nhịp đặt giá realtime.
+            </p>
+
+            <form asp-controller="Auction" asp-action="Index" method="get" class="hero-search">
+                <div class="hero-search-input-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text"
+                           name="Keyword"
+                           placeholder="Tìm sản phẩm, danh mục, người bán..."
+                           class="hero-search-input" />
+                </div>
+
+                <button type="submit" class="hero-search-btn">
+                    <i class="fas fa-magnifying-glass"></i> Tìm kiếm
+                </button>
+            </form>
+
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <strong>@(Model?.TotalCount ?? 0)</strong>
+                    <span>Phiên đang live</span>
+                </div>
+
+                <div class="hero-stat">
+                    <strong>@(Model?.Categories?.Count ?? 0)</strong>
+                    <span>Danh mục</span>
+                </div>
+
+                <div class="hero-stat">
+                    <strong>24/7</strong>
+                    <span>Cập nhật realtime</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-artifact" aria-label="AuctionHub live auction preview">
+            <div class="artifact-topbar">
+                <span class="artifact-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+                <span>Live auction console</span>
+            </div>
+
+            <div class="artifact-panel">
+                <div class="artifact-kicker">Đang dẫn đầu</div>
+                <div class="artifact-title">Đồng hồ cơ vintage</div>
+                <div class="artifact-price">12.850.000 VNĐ</div>
+                <div class="artifact-muted">Còn 02:18:44 · 38 lượt đặt giá</div>
+
+                <div class="artifact-list">
+                    <div class="artifact-row">
+                        <span>Bid mới</span>
+                        <strong>+250.000 VNĐ</strong>
+                    </div>
+
+                    <div class="artifact-row">
+                        <span>Người mua</span>
+                        <strong>khang***</strong>
+                    </div>
+
+                    <div class="artifact-row">
+                        <span>Bước giá</span>
+                        <strong>100.000 VNĐ</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="artifact-panel">
+                <div class="artifact-kicker">Gợi ý hệ thống</div>
+                <div class="artifact-muted">
+                    Theo dõi biến động giá, tham gia nhanh và dùng đặt giá tự động khi cần giữ vị trí dẫn đầu.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@if (hasAuctions)
+{
+    <section class="home-auctions-section">
+        <div class="home-auctions-header">
+            <div>
+                <span class="section-kicker">
+                    <i class="fas fa-fire"></i> Live auctions
+                </span>
+                <h2>Đang được đấu giá</h2>
+            </div>
+
+            <a asp-controller="Auction" asp-action="Index" class="btn-secondary">
+                Xem tất cả <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="auction-grid home-auction-grid">
+            @foreach (var item in Model.Results)
+            {
+                var statusClass = item.Status switch
+                {
+                    AuctionStatus.Active => "badge-active",
+                    AuctionStatus.Pending => "badge-pending",
+                    _ => "badge-ended"
+                };
+
+                var statusText = item.Status switch
+                {
+                    AuctionStatus.Active => "● Trực tiếp",
+                    AuctionStatus.Pending => "Sắp bắt đầu",
+                    _ => "Đã kết thúc"
+                };
+
+                <div class="auction-card">
+                    <div class="card-image">
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <img src="@item.ImageUrl" alt="@item.Title" loading="lazy" />
+                        }
+                        else
+                        {
+                            <div class="card-image-placeholder">
+                                <i class="fas @(item.Category?.Icon ?? "fa-box")"></i>
+                            </div>
+                        }
+
+                        <span class="@statusClass">@statusText</span>
+                        <span class="card-category-tag">@(item.Category?.Name ?? "Khác")</span>
+                    </div>
+
+                    <div class="card-body">
+                        <h3>@item.Title</h3>
+
+                        <div class="card-price">
+                            <span class="price-label">Giá hiện tại</span>
+                            <span class="price-value">@item.CurrentPrice.ToString("N0") VNĐ</span>
+                        </div>
+
+                        <div class="card-meta">
+                            <span>
+                                <i class="fas fa-gavel"></i> @(item.Bids?.Count ?? 0) lượt
+                            </span>
+
+                            <span class="countdown" data-end="@item.EndTime.ToString("o")">
+                                <i class="fas fa-clock"></i> ...
+                            </span>
+                        </div>
+
+                        <a asp-controller="Auction"
+                           asp-action="Detail"
+                           asp-route-id="@item.Id"
+                           class="btn-detail">
+                            Tham gia ngay <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@section Scripts {
+    <script>
+        function updateCountdowns() {
+            document.querySelectorAll('.countdown').forEach(el => {
+                const end = new Date(el.dataset.end);
+                const diff = end - new Date();
+
+                if (diff <= 0) {
+                    el.innerHTML = '<i class="fas fa-clock"></i> Đã kết thúc';
+                    return;
+                }
+
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+
+                el.innerHTML = `<i class="fas fa-clock"></i> ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            });
+        }
+
+        updateCountdowns();
+        setInterval(updateCountdowns, 1000);
+    </script>
+}

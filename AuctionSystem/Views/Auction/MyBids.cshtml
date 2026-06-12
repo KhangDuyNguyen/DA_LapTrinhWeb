@@ -1,0 +1,51 @@
+@model IEnumerable<Bid>
+@{ ViewData["Title"] = "Lịch sử đặt giá của tôi"; }
+
+<div class="page-header">
+    <div>
+        <span class="page-kicker"><i class="fas fa-clock-rotate-left"></i> Bid history</span>
+        <h1>Lịch sử đặt giá</h1>
+    </div>
+    <a asp-action="Index" class="btn-secondary"><i class="fas fa-layer-group"></i> Xem phiên đấu giá</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <i class="fas fa-gavel"></i>
+        <p>Bạn chưa tham gia đấu giá nào</p>
+        <a asp-action="Index" class="btn-primary">Xem các phiên đấu giá</a>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+        <div class="card table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Giá đã đặt</th>
+                        <th>Thời gian</th>
+                        <th>Trạng thái phiên</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var bid in Model)
+                    {
+                        var statusText = bid.AuctionItem?.Status switch { AuctionStatus.Active => "Đang diễn ra", AuctionStatus.Pending => "Sắp bắt đầu", _ => "Đã kết thúc" };
+                        var statusClass = bid.AuctionItem?.Status switch { AuctionStatus.Active => "badge-active", AuctionStatus.Pending => "badge-pending", _ => "badge-ended" };
+                        <tr>
+                            <td><strong>@bid.AuctionItem?.Title</strong></td>
+                            <td class="price-cell">@bid.Amount.ToString("N0") VNĐ</td>
+                            <td>@bid.BidTime.ToString("HH:mm - dd/MM/yyyy")</td>
+                            <td><span class="@statusClass">@statusText</span></td>
+                            <td><a asp-action="Detail" asp-route-id="@bid.AuctionItemId" class="btn-sm">Xem <i class="fas fa-arrow-right"></i></a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

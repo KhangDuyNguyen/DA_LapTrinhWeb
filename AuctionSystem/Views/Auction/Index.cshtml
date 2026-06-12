@@ -1,0 +1,184 @@
+@model AuctionSearchViewModel
+@{
+    ViewData["Title"] = "Phiên đấu giá";
+}
+
+<div class="page-header">
+    <div>
+        <span class="page-kicker"><i class="fas fa-layer-group"></i> Marketplace</span>
+        <h1>Tất cả phiên đấu giá</h1>
+    </div>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a asp-action="Create" class="btn-primary"><i class="fas fa-plus"></i> Tạo phiên mới</a>
+    }
+</div>
+
+<div class="page-container" style="padding-top:0; padding-bottom:0;">
+    <form asp-action="Index" method="get" class="search-form">
+        <div class="search-row">
+            <div class="search-input-wrap">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" name="Keyword" value="@Model.Keyword" class="search-input" placeholder="Tìm kiếm sản phẩm..." />
+            </div>
+            <select name="CategoryId" class="filter-select">
+                <option value="">Tất cả danh mục</option>
+                @foreach (var cat in Model.Categories)
+                {
+                    if (Model.CategoryId == cat.Id)
+                    {
+                        <option value="@cat.Id" selected>@cat.Name</option>
+                    }
+                    else
+                    {
+                        <option value="@cat.Id">@cat.Name</option>
+                    }
+                }
+            </select>
+            <select name="Status" class="filter-select">
+                <option value="">Tất cả trạng thái</option>
+                @if (Model.Status == "Active") { <option value="Active" selected>Đang diễn ra</option> } else { <option value="Active">Đang diễn ra</option> }
+                @if (Model.Status == "Pending") { <option value="Pending" selected>Sắp bắt đầu</option> } else { <option value="Pending">Sắp bắt đầu</option> }
+                @if (Model.Status == "Ended") { <option value="Ended" selected>Đã kết thúc</option> } else { <option value="Ended">Đã kết thúc</option> }
+            </select>
+            <select name="SortBy" class="filter-select">
+                @if (Model.SortBy == "newest") { <option value="newest" selected>Mới nhất</option> } else { <option value="newest">Mới nhất</option> }
+                @if (Model.SortBy == "ending_soon") { <option value="ending_soon" selected>Sắp kết thúc</option> } else { <option value="ending_soon">Sắp kết thúc</option> }
+                @if (Model.SortBy == "price_asc") { <option value="price_asc" selected>Giá thấp → cao</option> } else { <option value="price_asc">Giá thấp → cao</option> }
+                @if (Model.SortBy == "price_desc") { <option value="price_desc" selected>Giá cao → thấp</option> } else { <option value="price_desc">Giá cao → thấp</option> }
+                @if (Model.SortBy == "most_bids") { <option value="most_bids" selected>Nhiều lượt nhất</option> } else { <option value="most_bids">Nhiều lượt nhất</option> }
+            </select>
+            <button type="submit" class="btn-primary"><i class="fas fa-search"></i> Tìm</button>
+            @if (!string.IsNullOrEmpty(Model.Keyword) || Model.CategoryId.HasValue || !string.IsNullOrEmpty(Model.Status))
+            {
+                <a asp-action="Index" class="btn-secondary"><i class="fas fa-xmark"></i> Xóa lọc</a>
+            }
+        </div>
+    </form>
+</div>
+
+<div class="category-pills">
+    <a asp-action="Index" class="cat-pill @(Model.CategoryId == null && string.IsNullOrEmpty(Model.Status) ? "active" : "")">
+        <i class="fas fa-border-all"></i> Tất cả
+    </a>
+    <a asp-action="Index" asp-route-Status="Active" class="cat-pill @(Model.Status == "Active" ? "active" : "")">
+        <i class="fas fa-signal"></i> Đang diễn ra
+    </a>
+    <a asp-action="Index" asp-route-Status="Pending" class="cat-pill @(Model.Status == "Pending" ? "active" : "")">
+        <i class="fas fa-hourglass-start"></i> Sắp bắt đầu
+    </a>
+    @foreach (var cat in Model.Categories)
+    {
+        <a asp-action="Index" asp-route-CategoryId="@cat.Id" asp-route-SortBy="@Model.SortBy" class="cat-pill @(Model.CategoryId == cat.Id ? "active" : "")">
+            <i class="fas @cat.Icon"></i> @cat.Name
+        </a>
+    }
+</div>
+
+<div class="results-info">
+    <span>
+        @Model.TotalCount kết quả
+        @if (!string.IsNullOrEmpty(Model.Keyword))
+        {
+            <text> cho "@Model.Keyword"</text>
+        }
+    </span>
+</div>
+
+@if (!Model.Results.Any())
+{
+    <div class="empty-state">
+        <i class="fas fa-magnifying-glass"></i>
+        <p>Không tìm thấy phiên đấu giá nào</p>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a asp-action="Create" class="btn-primary">Tạo phiên đầu tiên</a>
+        }
+    </div>
+}
+else
+{
+    <div class="auction-grid">
+        @foreach (var item in Model.Results)
+        {
+            var statusClass = item.Status switch
+            {
+                AuctionStatus.Active => "badge-active",
+                AuctionStatus.Pending => "badge-pending",
+                _ => "badge-ended"
+            };
+            var statusText = item.Status switch
+            {
+                AuctionStatus.Active => "● Trực tiếp",
+                AuctionStatus.Pending => "Sắp bắt đầu",
+                _ => "Đã kết thúc"
+            };
+            <div class="auction-card">
+                <div class="card-image">
+                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                    {
+                        <img src="@item.ImageUrl" alt="@item.Title" loading="lazy" />
+                    }
+                    else
+                    {
+                        <div class="card-image-placeholder"><i class="fas @(item.Category?.Icon ?? "fa-box")"></i></div>
+                    }
+                    <span class="@statusClass">@statusText</span>
+                    @if (item.Category != null)
+                    {
+                        <span class="card-category-tag">@item.Category.Name</span>
+                    }
+                </div>
+                <div class="card-body">
+                    <h3>@item.Title</h3>
+                    <div class="card-price">
+                        <span class="price-label">Giá hiện tại</span>
+                        <span class="price-value">@item.CurrentPrice.ToString("N0") VNĐ</span>
+                    </div>
+                    <div class="card-meta">
+                        <span><i class="fas fa-gavel"></i> @(item.Bids?.Count ?? 0) lượt</span>
+                        @if (item.Status == AuctionStatus.Active)
+                        {
+                            <span class="countdown" data-end="@item.EndTime.ToString("o")"><i class="fas fa-clock"></i> ...</span>
+                        }
+                        else if (item.Status == AuctionStatus.Pending)
+                        {
+                            <span style="color:var(--warning);"><i class="fas fa-hourglass-start"></i> @item.StartTime.ToString("HH:mm dd/MM")</span>
+                        }
+                        else
+                        {
+                            <span><i class="fas fa-flag-checkered"></i> Kết thúc</span>
+                        }
+                    </div>
+                    <a asp-action="Detail" asp-route-id="@item.Id" class="btn-detail">
+                        @(item.Status == AuctionStatus.Active ? "Tham gia đấu giá" : "Xem chi tiết")
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+<script>
+function updateCountdowns() {
+    document.querySelectorAll('.countdown').forEach(el => {
+        const end = new Date(el.dataset.end);
+        const diff = end - new Date();
+        if (diff <= 0) {
+            el.innerHTML = '<i class="fas fa-clock"></i> Đã kết thúc';
+            el.style.color = 'var(--muted)';
+            return;
+        }
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        el.innerHTML = `<i class="fas fa-clock"></i> ${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        if (diff < 300000) el.style.color = 'var(--danger)';
+    });
+}
+updateCountdowns();
+setInterval(updateCountdowns, 1000);
+</script>
+}

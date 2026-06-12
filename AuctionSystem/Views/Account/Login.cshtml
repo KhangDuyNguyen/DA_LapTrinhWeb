@@ -1,0 +1,45 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Đăng nhập";
+}
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo"><i class="fas fa-gavel"></i></div>
+            <h2>Đăng nhập</h2>
+            <p>Tiếp tục tham gia các phiên đấu giá yêu thích của bạn.</p>
+        </div>
+
+        <form asp-action="Login" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="Email"><i class="fas fa-envelope"></i> Email</label>
+                <input asp-for="Email" class="form-control" placeholder="email@example.com" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Password"><i class="fas fa-lock"></i> Mật khẩu</label>
+                <input asp-for="Password" type="password" class="form-control" placeholder="Nhập mật khẩu" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-check">
+                <input asp-for="RememberMe" type="checkbox" />
+                <label asp-for="RememberMe">Ghi nhớ đăng nhập</label>
+            </div>
+
+            <button type="submit" class="btn-primary full-width"><i class="fas fa-arrow-right-to-bracket"></i> Đăng nhập</button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Chưa có tài khoản? <a asp-controller="Account" asp-action="Register">Đăng ký ngay</a></p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

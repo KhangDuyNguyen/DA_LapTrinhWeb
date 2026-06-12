@@ -1,0 +1,21 @@
+@{
+    ViewData["Title"] = "Tài liệu của tôi";
+}
+
+<div class="page-header">
+    <div>
+        <span class="page-kicker"><i class="fas fa-file-lines"></i> Documents</span>
+        <h1>Tài liệu của tôi</h1>
+    </div>
+    <a asp-action="Profile" class="btn-secondary"><i class="fas fa-arrow-left"></i> Hồ sơ</a>
+</div>
+
+<div class="page-container" style="padding-top:0;">
+    <div class="card">
+        <div class="empty-state" style="margin:0;">
+            <i class="fas fa-folder-open"></i>
+            <p>Chưa có tài liệu nào được tải lên</p>
+            <span style="color:var(--muted);">Trang này đã được thiết kế sẵn để sau này bạn thêm chức năng quản lý hồ sơ/CCCD.</span>
+        </div>
+    </div>
+</div>

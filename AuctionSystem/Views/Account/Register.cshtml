@@ -1,0 +1,390 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Đăng ký";
+}
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo"><i class="fas fa-user-plus"></i></div>
+            <h2>Tạo tài khoản</h2>
+            <p>Đăng ký bằng email và xác minh OTP trong vài bước.</p>
+        </div>
+
+        <div id="step1">
+            <form id="registerForm" novalidate>
+                <div asp-validation-summary="All" class="alert-danger"></div>
+
+                <div class="form-group">
+                    <label asp-for="FullName"><i class="fas fa-user"></i> Họ và tên</label>
+                    <input asp-for="FullName" class="form-control" placeholder="Nguyễn Văn A" />
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Email"><i class="fas fa-envelope"></i> Email</label>
+                    <input asp-for="Email" class="form-control" placeholder="email@example.com" id="emailInput" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Password"><i class="fas fa-lock"></i> Mật khẩu</label>
+                    <div class="input-with-icon">
+                        <input asp-for="Password" type="password" class="form-control" placeholder="Tối thiểu 6 ký tự" id="passInput" />
+                        <button type="button" class="input-icon-btn" onclick="togglePass('passInput', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="ConfirmPassword"><i class="fas fa-shield-halved"></i> Xác nhận mật khẩu</label>
+                    <div class="input-with-icon">
+                        <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Nhập lại mật khẩu" id="confirmInput" />
+                        <button type="button" class="input-icon-btn" onclick="togglePass('confirmInput', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                </div>
+
+                <button type="button" class="btn-primary full-width" id="sendOtpBtn" onclick="sendOtp()">
+                    <i class="fas fa-paper-plane"></i> Gửi mã xác minh
+                </button>
+            </form>
+        </div>
+
+        <div id="step2" style="display:none;">
+            <div class="otp-info" style="text-align:center;">
+                <div class="auth-logo"><i class="fas fa-envelope-open-text"></i></div>
+                <p style="color:var(--muted);">
+                    Mã xác minh đã được gửi đến<br>
+                    <strong id="otpEmailDisplay" style="color:var(--dark);"></strong>
+                </p>
+            </div>
+
+            <div class="otp-input-group">
+                <input type="text" maxlength="1" class="otp-digit" data-index="0" />
+                <input type="text" maxlength="1" class="otp-digit" data-index="1" />
+                <input type="text" maxlength="1" class="otp-digit" data-index="2" />
+                <input type="text" maxlength="1" class="otp-digit" data-index="3" />
+                <input type="text" maxlength="1" class="otp-digit" data-index="4" />
+                <input type="text" maxlength="1" class="otp-digit" data-index="5" />
+            </div>
+
+            <div class="otp-timer-row">
+                <span style="font-size:13px;color:var(--muted);">Mã hết hạn sau: </span>
+                <span id="otpCountdown" style="font-size:13px;font-weight:800;color:var(--primary);">05:00</span>
+            </div>
+
+            <div id="otpError" class="alert-danger" style="display:none;margin-bottom:12px;"></div>
+
+            <button type="button" class="btn-primary full-width" onclick="verifyOtp()">
+                <i class="fas fa-check-circle"></i> Xác minh & Đăng ký
+            </button>
+
+            <div style="display:flex;justify-content:center;gap:16px;margin-top:14px;">
+                <button type="button" class="btn-text-link" id="resendBtn" onclick="resendOtp()">
+                    Gửi lại mã
+                </button>
+
+                <button type="button" class="btn-text-link" onclick="backToStep1()">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                </button>
+            </div>
+        </div>
+
+        <div class="auth-footer">
+            <p>Đã có tài khoản? <a asp-action="Login">Đăng nhập</a></p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let otpTimer = null;
+        let resendTimer = null;
+        let otpCountdown = 300;
+        let resendCountdown = 0;
+        let isSendingOtp = false;
+
+        function togglePass(id, btn) {
+            const input = document.getElementById(id);
+            const icon = btn.querySelector('i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function getRegisterData() {
+            return {
+                fullName: document.querySelector('[name="FullName"]').value.trim(),
+                email: document.getElementById('emailInput').value.trim(),
+                password: document.getElementById('passInput').value,
+                confirm: document.getElementById('confirmInput').value
+            };
+        }
+
+        function validateRegisterData(data) {
+            if (!data.fullName || !data.email || !data.password || !data.confirm) {
+                alert('Vui lòng điền đầy đủ thông tin');
+                return false;
+            }
+
+            if (data.password !== data.confirm) {
+                alert('Mật khẩu xác nhận không khớp');
+                return false;
+            }
+
+            if (data.password.length < 6) {
+                alert('Mật khẩu tối thiểu 6 ký tự');
+                return false;
+            }
+
+            return true;
+        }
+
+        function setSendButtonState() {
+            const sendBtn = document.getElementById('sendOtpBtn');
+
+            if (!sendBtn) return;
+
+            if (isSendingOtp) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
+                return;
+            }
+
+            if (resendCountdown > 0) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = `<i class="fas fa-clock"></i> Chờ ${resendCountdown}s`;
+                return;
+            }
+
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Gửi mã xác minh';
+        }
+
+        async function sendOtp() {
+            if (isSendingOtp) return;
+
+            if (resendCountdown > 0) {
+                alert(`Vui lòng đợi ${resendCountdown} giây để gửi lại mã.`);
+                return;
+            }
+
+            const data = getRegisterData();
+
+            if (!validateRegisterData(data)) return;
+
+            isSendingOtp = true;
+            setSendButtonState();
+
+            try {
+                const resp = await fetch('/Account/SendOtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: data.email })
+                });
+
+                const result = await resp.json();
+
+                if (result.success) {
+                    document.getElementById('otpEmailDisplay').textContent = data.email;
+                    document.getElementById('step1').style.display = 'none';
+                    document.getElementById('step2').style.display = 'block';
+
+                    clearOtpInputs();
+                    startOtpTimer(result.expiresInSeconds || 300);
+                    startResendCooldown(result.cooldownSeconds || 120);
+
+                    document.querySelectorAll('.otp-digit')[0].focus();
+                } else {
+                    if (result.cooldownSeconds) {
+                        startResendCooldown(result.cooldownSeconds);
+                    }
+
+                    alert(result.message || 'Không gửi được mã. Thử lại sau.');
+                }
+            } catch {
+                alert('Lỗi kết nối. Thử lại sau.');
+            } finally {
+                isSendingOtp = false;
+                setSendButtonState();
+            }
+        }
+
+        async function resendOtp() {
+            if (isSendingOtp) return;
+
+            if (resendCountdown > 0) {
+                showOtpError(`Vui lòng đợi ${resendCountdown} giây để gửi lại mã.`);
+                return;
+            }
+
+            await sendOtp();
+        }
+
+        function startOtpTimer(seconds) {
+            const el = document.getElementById('otpCountdown');
+
+            clearInterval(otpTimer);
+
+            otpCountdown = seconds;
+            el.style.color = 'var(--primary)';
+
+            updateOtpTimerText();
+
+            otpTimer = setInterval(() => {
+                otpCountdown--;
+
+                updateOtpTimerText();
+
+                if (otpCountdown <= 0) {
+                    clearInterval(otpTimer);
+                    el.textContent = 'Hết hạn';
+                    el.style.color = 'var(--danger)';
+                }
+            }, 1000);
+        }
+
+        function updateOtpTimerText() {
+            const el = document.getElementById('otpCountdown');
+
+            const m = Math.floor(otpCountdown / 60);
+            const s = otpCountdown % 60;
+
+            el.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function startResendCooldown(seconds) {
+            clearInterval(resendTimer);
+
+            resendCountdown = seconds;
+
+            updateResendButton();
+            setSendButtonState();
+
+            resendTimer = setInterval(() => {
+                resendCountdown--;
+
+                if (resendCountdown <= 0) {
+                    clearInterval(resendTimer);
+                    resendCountdown = 0;
+                }
+
+                updateResendButton();
+                setSendButtonState();
+            }, 1000);
+        }
+
+        function updateResendButton() {
+            const resendBtn = document.getElementById('resendBtn');
+
+            if (!resendBtn) return;
+
+            if (resendCountdown > 0) {
+                resendBtn.disabled = true;
+                resendBtn.style.opacity = '0.55';
+                resendBtn.style.cursor = 'not-allowed';
+                resendBtn.textContent = `Gửi lại mã (${resendCountdown}s)`;
+            } else {
+                resendBtn.disabled = false;
+                resendBtn.style.opacity = '1';
+                resendBtn.style.cursor = 'pointer';
+                resendBtn.textContent = 'Gửi lại mã';
+            }
+        }
+
+        function backToStep1() {
+            clearInterval(otpTimer);
+
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step1').style.display = 'block';
+
+            setSendButtonState();
+        }
+
+        function clearOtpInputs() {
+            document.querySelectorAll('.otp-digit').forEach(input => {
+                input.value = '';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.otp-digit').forEach((input, i, arr) => {
+                input.addEventListener('input', e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    e.target.value = val;
+
+                    if (val && i < arr.length - 1) {
+                        arr[i + 1].focus();
+                    }
+                });
+
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Backspace' && !e.target.value && i > 0) {
+                        arr[i - 1].focus();
+                    }
+                });
+            });
+        });
+
+        async function verifyOtp() {
+            const otp = [...document.querySelectorAll('.otp-digit')]
+                .map(i => i.value)
+                .join('');
+
+            if (otp.length !== 6) {
+                showOtpError('Vui lòng nhập đủ 6 chữ số');
+                return;
+            }
+
+            const data = getRegisterData();
+
+            try {
+                const resp = await fetch('/Account/VerifyOtpAndRegister', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: data.email,
+                        fullName: data.fullName,
+                        password: data.password,
+                        otp: otp
+                    })
+                });
+
+                const result = await resp.json();
+
+                if (result.success) {
+                    window.location.href = result.redirectUrl || '/';
+                } else {
+                    showOtpError(result.message || 'Mã không đúng. Thử lại.');
+                }
+            } catch {
+                showOtpError('Lỗi kết nối. Thử lại sau.');
+            }
+        }
+
+        function showOtpError(msg) {
+            const el = document.getElementById('otpError');
+
+            el.textContent = msg;
+            el.style.display = 'block';
+
+            setTimeout(() => {
+                el.style.display = 'none';
+            }, 4000);
+        }
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

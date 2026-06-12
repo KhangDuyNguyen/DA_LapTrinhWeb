@@ -1,0 +1,51 @@
+@model IEnumerable<AuctionCategory>
+@{ ViewData["Title"] = "Quản lý danh mục"; }
+
+<div class="page-header">
+    <div>
+        <span class="page-kicker"><i class="fas fa-tags"></i> Category manager</span>
+        <h1>Danh mục</h1>
+    </div>
+    <a asp-action="Index" class="btn-secondary"><i class="fas fa-arrow-left"></i> Dashboard</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="admin-grid"><div class="alert-success"><i class="fas fa-check-circle"></i> @TempData["Success"]</div></div>
+}
+
+<div class="admin-grid">
+    <div class="card">
+        <div class="section-kicker"><i class="fas fa-plus"></i> Thêm danh mục mới</div>
+        <form asp-action="AddCategory" method="post">
+            <div class="form-group">
+                <label>Tên danh mục</label>
+                <input type="text" name="name" class="form-control" placeholder="VD: Đồ điện tử" required />
+            </div>
+            <div class="form-group">
+                <label>Icon Font Awesome</label>
+                <input type="text" name="icon" class="form-control" placeholder="VD: fa-mobile-alt" value="fa-tag" />
+                <small style="color:var(--muted);display:block;margin-top:6px;">Ví dụ: fa-car, fa-laptop, fa-camera, fa-watch-smart.</small>
+            </div>
+            <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Thêm danh mục</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="section-kicker"><i class="fas fa-list"></i> Danh sách (@Model.Count())</div>
+        <div style="display:grid;gap:10px;">
+            @foreach (var cat in Model)
+            {
+                <div class="category-row">
+                    <div style="display:flex;align-items:center;gap:10px;font-weight:800;color:var(--dark);">
+                        <i class="fas @cat.Icon"></i>
+                        <span>@cat.Name</span>
+                    </div>
+                    <form asp-action="DeleteCategory" asp-route-id="@cat.Id" method="post" onsubmit="return confirm('Xóa danh mục này?')">
+                        <button type="submit" class="icon-btn-danger"><i class="fas fa-trash"></i></button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>

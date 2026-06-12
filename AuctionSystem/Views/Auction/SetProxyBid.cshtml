@@ -1,0 +1,58 @@
+@model SetProxyBidViewModel
+@{
+    ViewData["Title"] = "Đặt giá tự động";
+}
+
+<div class="auth-container">
+    <div class="auth-card" style="width:min(540px,100%);">
+        <div class="auth-header">
+            <div class="auth-logo"><i class="fas fa-robot"></i></div>
+            <h2>Đặt giá tự động</h2>
+            <p>Hệ thống sẽ tự động tăng giá theo bước tối thiểu, không vượt quá mức bạn đặt.</p>
+        </div>
+
+        <div class="card-price" style="margin-bottom:20px;">
+            <span class="price-label">Sản phẩm</span>
+            <strong style="display:block;color:var(--dark);font-size:18px;margin-bottom:12px;">@Model.AuctionTitle</strong>
+            <div class="info-grid">
+                <div>
+                    <span class="price-label">Giá hiện tại</span>
+                    <span class="price-value">@Model.CurrentPrice.ToString("N0") VNĐ</span>
+                </div>
+                <div>
+                    <span class="price-label">Bước giá</span>
+                    <strong style="color:var(--dark);">+@Model.MinBidIncrement.ToString("N0") VNĐ</strong>
+                </div>
+            </div>
+        </div>
+
+        <form asp-action="SetProxyBid" method="post">
+            <input type="hidden" asp-for="AuctionItemId" />
+            <div asp-validation-summary="All" class="alert-danger"></div>
+            <div class="form-group">
+                <label asp-for="MaxAmount"><i class="fas fa-coins"></i> Giá tối đa bạn chấp nhận (VNĐ)</label>
+                <input asp-for="MaxAmount" type="text" id="proxyInput" class="form-control" placeholder="Nhập giá tối đa..." />
+                <span asp-validation-for="MaxAmount" class="text-danger"></span>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary" style="flex:1;"><i class="fas fa-robot"></i> Xác nhận</button>
+                <a asp-action="Detail" asp-route-id="@Model.AuctionItemId" class="btn-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const inp = document.getElementById('proxyInput');
+let raw = parseFloat(inp.value.replace(/\./g,'')) || 0;
+if (raw) inp.value = raw.toLocaleString('vi-VN');
+inp.addEventListener('input', function () {
+    let digits = this.value.replace(/\./g,'').replace(/[^0-9]/g,'');
+    if (!digits) { this.value = ''; return; }
+    this.value = parseInt(digits).toLocaleString('vi-VN');
+});
+inp.form.addEventListener('submit', function () { inp.value = inp.value.replace(/\./g,''); });
+</script>
+@{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

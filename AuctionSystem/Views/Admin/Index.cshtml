@@ -1,0 +1,71 @@
+@model IEnumerable<AuctionItem>
+@{ ViewData["Title"] = "Admin Dashboard"; }
+
+<div class="page-header">
+    <div>
+        <span class="page-kicker"><i class="fas fa-shield-halved"></i> Admin center</span>
+        <h1>Dashboard quản trị</h1>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a asp-action="PendingAuctions" class="btn-secondary"><i class="fas fa-clock"></i> Chờ duyệt @if ((int)ViewBag.PendingApproval > 0) { <span class="badge-pending">@ViewBag.PendingApproval</span> }</a>
+        <a asp-action="Users" class="btn-secondary"><i class="fas fa-users"></i> Người dùng</a>
+        <a asp-action="Categories" class="btn-secondary"><i class="fas fa-tags"></i> Danh mục</a>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card"><div class="stat-value">@ViewBag.TotalUsers</div><div class="stat-label">Người dùng</div></div>
+    <div class="stat-card"><div class="stat-value">@ViewBag.TotalAuctions</div><div class="stat-label">Tổng phiên</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--warning);">@ViewBag.PendingApproval</div><div class="stat-label">Chờ duyệt</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--success);">@ViewBag.ActiveAuctions</div><div class="stat-label">Đang diễn ra</div></div>
+    <div class="stat-card"><div class="stat-value">@ViewBag.TotalBids</div><div class="stat-label">Lượt đặt giá</div></div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="table-wrap"><div class="alert-success"><i class="fas fa-check-circle"></i> @TempData["Success"]</div></div>
+}
+
+<div class="table-wrap">
+    <div class="card table-card">
+        <div class="section-kicker"><i class="fas fa-clock-rotate-left"></i> Phiên gần đây</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Người tạo</th>
+                    <th>Giá hiện tại</th>
+                    <th>Lượt</th>
+                    <th>Trạng thái</th>
+                    <th>Duyệt</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    var statusText = item.Status switch { AuctionStatus.Active => "Đang diễn ra", AuctionStatus.Pending => "Chờ", _ => "Kết thúc" };
+                    var statusClass = item.Status switch { AuctionStatus.Active => "badge-active", AuctionStatus.Pending => "badge-pending", _ => "badge-ended" };
+                    <tr>
+                        <td><strong>@item.Title</strong></td>
+                        <td>@item.CreatedByUser?.FullName</td>
+                        <td class="price-cell">@item.CurrentPrice.ToString("N0") VNĐ</td>
+                        <td>@(item.Bids?.Count ?? 0)</td>
+                        <td><span class="@statusClass">@statusText</span></td>
+                        <td>
+                            @if (!item.IsApproved)
+                            {
+                                <form asp-action="ApproveAuction" asp-route-id="@item.Id" method="post" style="display:inline;">
+                                    <button type="submit" class="btn-sm"><i class="fas fa-check"></i> Duyệt</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="badge-active"><i class="fas fa-check-circle"></i> Đã duyệt</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

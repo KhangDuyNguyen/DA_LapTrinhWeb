@@ -1,0 +1,102 @@
+@model IEnumerable<ApplicationUser>
+@{ ViewData["Title"] = "Quản lý người dùng"; }
+
+<div class="page-header">
+    <div>
+        <span class="page-kicker"><i class="fas fa-users"></i> User manager</span>
+        <h1>Người dùng (@Model.Count())</h1>
+    </div>
+    <a asp-action="Index" class="btn-secondary"><i class="fas fa-arrow-left"></i> Dashboard</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="table-wrap"><div class="alert-success"><i class="fas fa-check-circle"></i> @TempData["Success"]</div></div>
+}
+
+<div class="table-wrap">
+    <div class="card table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Người dùng</th>
+                    <th>Email</th>
+                    <th>Ngày tạo</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model)
+                {
+                    var roles = (ViewBag.UserRoles as Dictionary<string, IList<string>>)?[user.Id] ?? new List<string>();
+                    var isAdmin = roles.Contains("Admin");
+                    var isLocked = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.Now;
+                    <tr>
+                        <td>
+                            <div class="user-mini">
+                                <div class="user-mini-avatar">@(user.FullName.Length > 0 ? user.FullName[0].ToString().ToUpper() : "?")</div>
+                                <strong>@user.FullName</strong>
+                            </div>
+                        </td>
+                        <td>@user.Email</td>
+                        <td>@user.CreatedAt.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            @if (isAdmin)
+                            {
+                                <span class="badge-ended"><i class="fas fa-shield-halved"></i> Admin</span>
+                            }
+                            else
+                            {
+                                <span class="badge-pending"><i class="fas fa-user"></i> User</span>
+                            }
+                        </td>
+                        <td>
+                            @if (isLocked)
+                            {
+                                <span class="badge-ended" style="color:var(--danger);background:var(--danger-soft);"><i class="fas fa-lock"></i> Bị khóa</span>
+                            }
+                            else
+                            {
+                                <span class="badge-active"><i class="fas fa-unlock"></i> Hoạt động</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="action-row">
+                                @if (!isAdmin)
+                                {
+                                    <form asp-action="MakeAdmin" method="post">
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button type="submit" class="btn-sm"><i class="fas fa-crown"></i> Admin</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="RemoveAdmin" method="post">
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button type="submit" class="btn-sm"><i class="fas fa-user"></i> Bỏ Admin</button>
+                                    </form>
+                                }
+                                @if (!isLocked)
+                                {
+                                    <form asp-action="LockUser" method="post" onsubmit="return confirm('Khóa tài khoản này?')">
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button type="submit" class="btn-sm" style="color:var(--danger);"><i class="fas fa-lock"></i> Khóa</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="UnlockUser" method="post">
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button type="submit" class="btn-sm" style="color:var(--success);"><i class="fas fa-unlock"></i> Mở khóa</button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,66 @@
+@model IEnumerable<AuctionItem>
+@{ ViewData["Title"] = "Phiên đấu giá của tôi"; }
+
+<div class="page-header">
+    <div>
+        <span class="page-kicker"><i class="fas fa-box-open"></i> Seller center</span>
+        <h1>Phiên đấu giá của tôi</h1>
+    </div>
+    <a asp-action="Create" class="btn-primary"><i class="fas fa-plus"></i> Tạo phiên mới</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <i class="fas fa-box-open"></i>
+        <p>Bạn chưa tạo phiên đấu giá nào</p>
+        <a asp-action="Create" class="btn-primary">Tạo phiên đầu tiên</a>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+        <div class="card table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Giá khởi điểm</th>
+                        <th>Giá hiện tại</th>
+                        <th>Lượt đặt</th>
+                        <th>Kết thúc lúc</th>
+                        <th>Duyệt</th>
+                        <th>Trạng thái</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        var statusText = item.Status switch { AuctionStatus.Active => "Đang diễn ra", AuctionStatus.Pending => "Sắp bắt đầu", _ => "Đã kết thúc" };
+                        var statusClass = item.Status switch { AuctionStatus.Active => "badge-active", AuctionStatus.Pending => "badge-pending", _ => "badge-ended" };
+                        <tr>
+                            <td><strong>@item.Title</strong></td>
+                            <td>@item.StartingPrice.ToString("N0") VNĐ</td>
+                            <td class="price-cell">@item.CurrentPrice.ToString("N0") VNĐ</td>
+                            <td>@(item.Bids?.Count ?? 0)</td>
+                            <td>@item.EndTime.ToString("HH:mm dd/MM/yyyy")</td>
+                            <td>
+                                @if (item.IsApproved)
+                                {
+                                    <span class="badge-active">Đã duyệt</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-pending">Chờ duyệt</span>
+                                }
+                            </td>
+                            <td><span class="@statusClass">@statusText</span></td>
+                            <td><a asp-action="Detail" asp-route-id="@item.Id" class="btn-sm">Xem <i class="fas fa-arrow-right"></i></a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

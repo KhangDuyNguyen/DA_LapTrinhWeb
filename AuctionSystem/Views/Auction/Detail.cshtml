@@ -1,0 +1,276 @@
+@model AuctionItem
+@{
+    ViewData["Title"] = Model.Title;
+    var statusClass = Model.Status switch
+    {
+        AuctionStatus.Active => "badge-active",
+        AuctionStatus.Pending => "badge-pending",
+        _ => "badge-ended"
+    };
+    var statusText = Model.Status switch
+    {
+        AuctionStatus.Active => "● Đang diễn ra",
+        AuctionStatus.Pending => "Sắp bắt đầu",
+        _ => "Đã kết thúc"
+    };
+}
+
+<div class="detail-layout">
+    <div class="detail-left">
+        <div class="product-image-container">
+            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+            {
+                <img src="@Model.ImageUrl" alt="@Model.Title" class="product-detail-image" />
+            }
+            else
+            {
+                <div class="product-image-placeholder"><i class="fas @(Model.Category?.Icon ?? "fa-image")"></i></div>
+            }
+        </div>
+
+        <div class="product-info">
+            <span class="page-kicker"><i class="fas @(Model.Category?.Icon ?? "fa-tag")"></i> @(Model.Category?.Name ?? "Sản phẩm đấu giá")</span>
+            <h1>@Model.Title</h1>
+            <span class="@statusClass status-chip">@statusText</span>
+            <p class="product-desc" style="margin-top:18px;">@Model.Description</p>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Giá khởi điểm</span>
+                    <span class="info-value">@Model.StartingPrice.ToString("N0") VNĐ</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Bước giá tối thiểu</span>
+                    <span class="info-value">+@Model.MinBidIncrement.ToString("N0") VNĐ</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Người tạo</span>
+                    <span class="info-value">@(Model.CreatedByUser?.FullName ?? "Ẩn danh")</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Thời gian</span>
+                    <span class="info-value">@Model.StartTime.ToString("HH:mm dd/MM") → @Model.EndTime.ToString("HH:mm dd/MM/yyyy")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-right">
+        <div class="bid-panel">
+            <div class="current-price-section">
+                <span class="current-price-label">Giá hiện tại</span>
+                <span class="current-price" id="currentPrice">@Model.CurrentPrice.ToString("N0") VNĐ</span>
+                @if (Model.Bids != null && Model.Bids.Any())
+                {
+                    <span class="highest-bidder" id="highestBidder">
+                        <i class="fas fa-crown" style="color:var(--accent);"></i>
+                        @Model.Bids.OrderByDescending(b => b.Amount).First().User?.FullName đang dẫn đầu
+                    </span>
+                }
+                else
+                {
+                    <span class="highest-bidder" id="highestBidder">Chưa có lượt đặt giá nào</span>
+                }
+            </div>
+
+            <div class="timer-section">
+                @if (Model.Status == AuctionStatus.Active)
+                {
+                    <div class="timer" id="timer" data-end="@Model.EndTime.ToString("o")">
+                        <div class="timer-block"><span id="t-h">00</span><small>Giờ</small></div>
+                        <div class="timer-sep">:</div>
+                        <div class="timer-block"><span id="t-m">00</span><small>Phút</small></div>
+                        <div class="timer-sep">:</div>
+                        <div class="timer-block"><span id="t-s">00</span><small>Giây</small></div>
+                    </div>
+                }
+                else if (Model.Status == AuctionStatus.Pending)
+                {
+                    <div class="timer-pending"><i class="fas fa-hourglass-start"></i> Bắt đầu lúc @Model.StartTime.ToString("HH:mm dd/MM/yyyy")</div>
+                }
+                else
+                {
+                    <div class="timer-ended">
+                        <i class="fas fa-flag-checkered"></i> Phiên đấu giá đã kết thúc
+                        @if (Model.Winner != null)
+                        {
+                            <div class="winner-announce">
+                                <i class="fas fa-trophy"></i> Người thắng: <strong>@Model.Winner.FullName</strong> với giá <strong>@Model.CurrentPrice.ToString("N0") VNĐ</strong>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @if (Model.Status == AuctionStatus.Active && User.Identity?.IsAuthenticated == true)
+            {
+                var minBid = Model.CurrentPrice + Model.MinBidIncrement;
+                <div class="bid-form">
+                    <div id="bidError" class="bid-error" style="display:none"></div>
+                    <div id="bidSuccess" class="bid-success" style="display:none"></div>
+                    <div class="bid-input-group form-group">
+                        <label>Giá thầu của bạn (tối thiểu @minBid.ToString("N0") VNĐ)</label>
+                        <div class="bid-input-row">
+                            <input type="number" id="bidAmount" class="bid-input" value="@minBid" min="@minBid" step="@Model.MinBidIncrement" />
+                            <span class="bid-currency">VNĐ</span>
+                        </div>
+                    </div>
+                    <button id="placeBidBtn" class="btn-bid" onclick="placeBid()"><i class="fas fa-gavel"></i> Đặt giá ngay</button>
+                    <p class="bid-note" style="margin-top:10px;"><i class="fas fa-circle-info"></i> Hệ thống cập nhật giá realtime khi có người đặt giá.</p>
+
+                    <a asp-controller="Auction" asp-action="SetProxyBid" asp-route-id="@Model.Id" class="proxy-bid-btn" style="margin-top:10px;">
+                        <span class="proxy-bid-label"><i class="fas fa-robot"></i> @(ViewBag.MyProxyBid != null ? "Đang tự động đến" : "Đặt giá tự động")</span>
+                        @if (ViewBag.MyProxyBid != null)
+                        {
+                            <span class="proxy-bid-value">@((ViewBag.MyProxyBid as AuctionSystem.Models.ProxyBid)?.MaxAmount.ToString("N0")) VNĐ</span>
+                        }
+                        else
+                        {
+                            <span class="proxy-bid-value"><i class="fas fa-chevron-right"></i></span>
+                        }
+                    </a>
+                </div>
+            }
+            else if (User.Identity?.IsAuthenticated != true && Model.Status == AuctionStatus.Active)
+            {
+                <div class="bid-login-prompt">
+                    <a asp-controller="Account" asp-action="Login" class="btn-primary full-width"><i class="fas fa-sign-in-alt"></i> Đăng nhập để đấu giá</a>
+                </div>
+            }
+        </div>
+
+        <div class="bid-history" style="margin-top:16px;">
+            <div class="bid-history-inner">
+                <h3><i class="fas fa-clock-rotate-left"></i> Lịch sử đặt giá</h3>
+                <div id="bidList">
+                    @if (Model.Bids != null && Model.Bids.Any())
+                    {
+                        @foreach (var bid in Model.Bids.OrderByDescending(b => b.BidTime))
+                        {
+                            <div class="bid-item">
+                                <div class="bid-item-left">
+                                    <i class="fas fa-user-circle"></i>
+                                    <span class="bidder-name">@(bid.User?.FullName ?? "Ẩn danh")</span>
+                                </div>
+                                <div class="bid-item-right">
+                                    <span class="bid-amount">@bid.Amount.ToString("N0") VNĐ</span>
+                                    <span class="bid-time">@bid.BidTime.ToString("HH:mm:ss")</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="no-bids" id="noBidsText">Chưa có lượt đặt giá nào. Hãy là người đầu tiên!</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const auctionId = @Model.Id;
+const isActive = @((Model.Status == AuctionStatus.Active).ToString().ToLower());
+let endTime = new Date("@Model.EndTime.ToString("o")");
+
+const bidAmountInput = document.getElementById("bidAmount");
+if (bidAmountInput) {
+    let rawValue = parseFloat(bidAmountInput.value) || 0;
+    bidAmountInput.value = rawValue ? rawValue.toLocaleString('vi-VN') : '';
+    bidAmountInput.type = "text";
+    bidAmountInput.addEventListener('input', function () {
+        let digits = this.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+        if (!digits) { this.value = ''; return; }
+        this.value = parseInt(digits).toLocaleString('vi-VN');
+    });
+    bidAmountInput.addEventListener('keydown', function (e) {
+        const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+        if (allowed.includes(e.key)) return;
+        if (!/^\d$/.test(e.key)) e.preventDefault();
+    });
+}
+function getBidAmount() {
+    const raw = document.getElementById("bidAmount").value.replace(/\./g, '');
+    return parseFloat(raw) || 0;
+}
+
+const connection = new signalR.HubConnectionBuilder().withUrl("/auctionHub").withAutomaticReconnect().build();
+connection.start().then(() => connection.invoke("JoinAuction", auctionId)).catch(err => console.error("SignalR error:", err));
+
+connection.on("BidPlaced", function (data) {
+    document.getElementById("currentPrice").textContent = parseInt(data.currentPrice).toLocaleString('vi-VN') + " VNĐ";
+    document.getElementById("highestBidder").innerHTML = `<i class="fas fa-crown" style="color:var(--accent);"></i> ${data.bidderName} đang dẫn đầu`;
+    const noBids = document.getElementById("noBidsText");
+    if (noBids) noBids.remove();
+    const bidList = document.getElementById("bidList");
+    const newItem = document.createElement("div");
+    newItem.className = "bid-item new-bid";
+    newItem.innerHTML = `
+        <div class="bid-item-left"><i class="fas fa-user-circle"></i><span class="bidder-name">${data.bidderName}</span></div>
+        <div class="bid-item-right"><span class="bid-amount">${parseInt(data.amount).toLocaleString('vi-VN')} VNĐ</span><span class="bid-time">${data.bidTime.split(' ')[0]}</span></div>`;
+    bidList.insertBefore(newItem, bidList.firstChild);
+    const input = document.getElementById("bidAmount");
+    if (input) {
+        const minBid = data.currentPrice + @Model.MinBidIncrement;
+        input.min = minBid;
+        input.value = minBid.toLocaleString('vi-VN');
+        input.closest('.bid-input-group').querySelector('label').textContent = `Giá thầu của bạn (tối thiểu ${minBid.toLocaleString('vi-VN')} VNĐ)`;
+    }
+});
+
+connection.on("BidError", function (message) {
+    const errEl = document.getElementById("bidError");
+    errEl.textContent = message;
+    errEl.style.display = "block";
+    setTimeout(() => errEl.style.display = "none", 4000);
+});
+
+connection.on("AuctionExtended", function (data) {
+    const banner = document.createElement('div');
+    banner.className = 'extend-banner';
+    banner.innerHTML = `<i class="fas fa-clock"></i> ${data.message}`;
+    document.querySelector('.bid-panel').prepend(banner);
+    endTime = new Date(data.newEndTime);
+    setTimeout(() => banner.remove(), 8000);
+});
+
+function placeBid() {
+    const amount = getBidAmount();
+    if (!amount || amount <= 0) return;
+    document.getElementById("placeBidBtn").disabled = true;
+    document.getElementById("bidError").style.display = "none";
+    connection.invoke("PlaceBid", auctionId, amount)
+        .then(() => {
+            document.getElementById("bidSuccess").textContent = "Đặt giá thành công!";
+            document.getElementById("bidSuccess").style.display = "block";
+            setTimeout(() => document.getElementById("bidSuccess").style.display = "none", 3000);
+        })
+        .catch(() => {
+            document.getElementById("bidError").textContent = "Lỗi kết nối. Thử lại sau.";
+            document.getElementById("bidError").style.display = "block";
+        })
+        .finally(() => document.getElementById("placeBidBtn").disabled = false);
+}
+
+if (isActive) {
+    function updateTimer() {
+        const diff = endTime - new Date();
+        if (diff <= 0) {
+            ["t-h","t-m","t-s"].forEach(id => document.getElementById(id).textContent = "00");
+            clearInterval(timerInterval);
+            setTimeout(() => location.reload(), 2000);
+            return;
+        }
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        document.getElementById("t-h").textContent = h.toString().padStart(2,'0');
+        document.getElementById("t-m").textContent = m.toString().padStart(2,'0');
+        document.getElementById("t-s").textContent = s.toString().padStart(2,'0');
+    }
+    updateTimer();
+    const timerInterval = setInterval(updateTimer, 1000);
+}
+</script>
+}
